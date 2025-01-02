@@ -1,3 +1,3 @@
-#Made using react+vite
+# Made using react+vite
 
 A simple looking frontend
