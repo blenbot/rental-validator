@@ -3,14 +3,6 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const { Pool } = require('pg');
 require('dotenv').config({ path: './.env' });
-// Add this right after require('dotenv').config();
-console.log('Environment Variables:', {
-    DB_USER: process.env.DB_USER,
-    DB_PASSWORD: process.env.DB_PASSWORD,
-    DB_HOST: process.env.DB_HOST,
-    DB_PORT: process.env.DB_PORT,
-    DB_NAME: process.env.DB_NAME
-});
 
 const app = express();
 
@@ -18,35 +10,56 @@ app.get('/', (req, res) => {
     res.send('Rental Price Validator Backend is Running!');
 });
 
-
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
 
 // PostgreSQL Pool
-
-
 const pool = new Pool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     host: process.env.DB_HOST,
     port: process.env.DB_PORT,
-    database: process.env.DB_NAME
+    database: process.env.DB_NAME,
 });
 
 pool.connect()
     .then(() => console.log('Connected to PostgreSQL'))
     .catch((err) => console.error('Connection error', err.stack));
 
+// Helper function to calculate median
+const calculateMedian = (arr) => {
+    const sorted = arr.slice().sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 !== 0
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+};
+
+// Helper function to calculate range
+const calculateRange = (mean, stdDev = 0.2) => {
+    return {
+        low: mean - mean * stdDev,
+        high: mean + mean * stdDev,
+    };
+};
+
 // API to Save Rental Data
 app.post('/api/rentals', async (req, res) => {
     const { area, rentalPrices } = req.body;
-    const averagePrice = rentalPrices.reduce((a, b) => a + b, 0) / rentalPrices.length;
+
+    if (!rentalPrices || rentalPrices.length < 4) {
+        return res.status(400).json({ message: 'Provide at least 4 rental prices' });
+    }
+
+    const mean = rentalPrices.reduce((a, b) => a + b, 0) / rentalPrices.length;
+    const median = calculateMedian(rentalPrices);
+    const range = calculateRange(mean);
 
     try {
         const result = await pool.query(
-            'INSERT INTO rentals (area, rental_prices, average_price) VALUES ($1, $2, $3) RETURNING *',
-            [area, rentalPrices, averagePrice]
+            'INSERT INTO rentals (area, rental_prices, mean_price, median_price, price_range) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+            [area, rentalPrices, mean, median, JSON.stringify(range)]
         );
         res.status(201).json({ message: 'Rental data saved successfully!', data: result.rows[0] });
     } catch (error) {
@@ -65,16 +78,22 @@ app.post('/api/validate', async (req, res) => {
         }
 
         const rental = result.rows[0];
-        const averagePrice = rental.average_price;
+        const { mean_price: mean, median_price: median, price_range } = rental;
 
         let verdict = 'Equal to average';
-        if (rentPrice > averagePrice) {
+        if (rentPrice > price_range.high) {
             verdict = 'Overpriced';
-        } else if (rentPrice < averagePrice) {
+        } else if (rentPrice < price_range.low) {
             verdict = 'Underpriced';
         }
 
-        res.status(200).json({ area, averagePrice, verdict });
+        res.status(200).json({
+            area,
+            mean,
+            median,
+            range: price_range,
+            verdict,
+        });
     } catch (error) {
         res.status(500).json({ message: 'Failed to validate rental price', error });
     }
@@ -82,4 +101,5 @@ app.post('/api/validate', async (req, res) => {
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
 
