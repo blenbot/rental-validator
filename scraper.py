@@ -8,10 +8,8 @@ from psycopg2.extras import Json
 from dotenv import load_dotenv
 
 
-# Load environment variables
 load_dotenv()
 
-# Get database credentials from environment variables
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 DB_NAME = os.getenv("DB_NAME")
@@ -19,10 +17,9 @@ DB_HOST = os.getenv("DB_HOST")
 DB_PORT = os.getenv("DB_PORT")
 
 
-# Areas to Scrape
 areas = ["Saket", "Punjabi Bagh", "Hauz Khas", "Rajouri Garden", "Tagore Garden", "Paschim Vihar"]
 
-def scrape_nobroker():
+def scrape_mb():
     # Set up Selenium WebDriver with options
     options = webdriver.ChromeOptions()
     options.add_argument('--disable-gpu')
@@ -63,7 +60,7 @@ def scrape_nobroker():
                     
                     results.append({
                         'area': area,
-                        'rental_prices': prices,  # Array of top 4 rentals
+                        'rental_prices': prices,
                         'mean_price': mean_price,
                         'median_price': median_price,
                         'price_range': price_range
@@ -122,6 +119,6 @@ def store_data(results):
             conn.close()
 
 if __name__ == "__main__":
-    scraped_data = scrape_nobroker()
+    scraped_data = scrape_mb()
     if scraped_data:
         store_data(scraped_data)
