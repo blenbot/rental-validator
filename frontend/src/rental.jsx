@@ -4,8 +4,17 @@ function RentalForm() {
     const [area, setArea] = useState("");
     const [rentPrice, setRentPrice] = useState("");
     const [loading, setLoading] = useState(false);
-    const [response, setResponse] = useState(null); // Store API response
-    const [error, setError] = useState(""); // Store error message
+    const [response, setResponse] = useState(null);
+    const [error, setError] = useState("");
+
+    const areaOptions = [
+        "Saket",
+        "Hauz Khas",
+        "Punjabi Bagh",
+        "Rajouri Garden",
+        "Tagore Garden",
+        "Paschim Vihar"
+    ];
 
     const handleApiCall = async (area, rentPrice) => {
         setLoading(true);
@@ -24,7 +33,7 @@ function RentalForm() {
             }
 
             const data = await response.json();
-            setResponse(data); // Set the detailed API response
+            setResponse(data);
         } catch (err) {
             setError(err.message || "An unexpected error occurred. Please try again.");
             console.error("API Call Error:", err);
@@ -36,13 +45,12 @@ function RentalForm() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        if (!area.trim() || rentPrice <= 0) {
-            setError("Please provide a valid area and a positive rent price.");
+        if (!area || rentPrice <= 0) {
+            setError("Please select an area and provide a positive rent price.");
             return;
         }
 
         handleApiCall(area, Number(rentPrice));
-        setArea("");
         setRentPrice("");
     };
 
@@ -55,15 +63,26 @@ function RentalForm() {
                 <label htmlFor="area" style={{ display: "block", fontWeight: "bold" }}>
                     Area
                 </label>
-                <input
+                <select
                     id="area"
-                    type="text"
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
                     required
-                    placeholder="Enter the area name"
-                    style={{ width: "100%", padding: "0.5rem", marginTop: "0.5rem" }}
-                />
+                    style={{
+                        width: "100%",
+                        padding: "0.5rem",
+                        marginTop: "0.5rem",
+                        borderRadius: "4px",
+                        border: "1px solid #ccc"
+                    }}
+                >
+                    <option value="">Select an area</option>
+                    {areaOptions.map((option) => (
+                        <option key={option} value={option}>
+                            {option}
+                        </option>
+                    ))}
+                </select>
             </div>
             <div style={{ marginBottom: "1rem" }}>
                 <label htmlFor="rentPrice" style={{ display: "block", fontWeight: "bold" }}>
@@ -107,15 +126,21 @@ function RentalForm() {
                     <p>
                         <strong>Rent Price:</strong> ₹{response.rentPrice}
                     </p>
-                    <p>
-                        <strong>Mean Price:</strong> ₹{response.meanPrice}
-                    </p>
-                    <p>
-                        <strong>Median Price:</strong> ₹{response.medianPrice}
-                    </p>
-                    <p>
-                        <strong>Price Range:</strong> ₹{response.priceRange.low} - ₹{response.priceRange.high}
-                    </p>
+                    {response.meanPrice && (
+                        <p>
+                            <strong>Mean Price:</strong> ₹{response.meanPrice}
+                        </p>
+                    )}
+                    {response.medianPrice && (
+                        <p>
+                            <strong>Median Price:</strong> ₹{response.medianPrice}
+                        </p>
+                    )}
+                    {response.priceRange && response.priceRange.low !== null && (
+                        <p>
+                            <strong>Price Range:</strong> ₹{response.priceRange.low} - ₹{response.priceRange.high}
+                        </p>
+                    )}
                     <p>
                         <strong>Verdict:</strong>{" "}
                         <span
@@ -137,4 +162,4 @@ function RentalForm() {
     );
 }
 
-export default RentalForm;
+export default RentalForm; 

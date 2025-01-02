@@ -73,31 +73,39 @@ app.post('/api/validate', async (req, res) => {
 
     try {
         const result = await pool.query('SELECT * FROM rentals WHERE area = $1', [area]);
+
         if (result.rows.length === 0) {
             return res.status(404).json({ message: 'No data found for the specified area' });
         }
 
         const rental = result.rows[0];
-        const { mean_price: mean, median_price: median, price_range } = rental;
 
-        let verdict = 'Equal to average';
-        if (rentPrice > price_range.high) {
-            verdict = 'Overpriced';
-        } else if (rentPrice < price_range.low) {
+        const priceRange = rental.price_range;
+        const meanPrice = rental.mean_price;
+        const medianPrice = rental.median_price;
+
+        // Validation logic
+        let verdict = 'Fair';
+        if (rentPrice < priceRange.low) {
             verdict = 'Underpriced';
+        } else if (rentPrice > priceRange.high) {
+            verdict = 'Overpriced';
         }
 
-        res.status(200).json({
-            area,
-            mean,
-            median,
-            range: price_range,
-            verdict,
-        });
+        const response = { 
+            area, 
+            rentPrice, 
+            meanPrice, 
+            medianPrice, 
+            priceRange, 
+            verdict 
+        };
+        res.status(200).json(response);
     } catch (error) {
         res.status(500).json({ message: 'Failed to validate rental price', error });
     }
 });
+
 
 const PORT = 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
